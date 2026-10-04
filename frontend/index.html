@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>منشئ المحتوى الذكي</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>منشئ المحتوى الذكي</h1>
+        <p>إنشاء نصوص عربية + صوت + فيديو سريع ومناسب للجهاز المنزلي الاقتصادي</p>
+      </header>
+
+      <main class="panel">
+        <label for="topic">موضوع المحتوى</label>
+        <textarea id="topic" rows="4" placeholder="اكتب موضوعًا مثل: طرق زيادة الإنتاجية في المنزل"></textarea>
+
+        <div class="row">
+          <div>
+            <label for="tone">الأسلوب</label>
+            <select id="tone">
+              <option>إعلامي</option>
+              <option>تعليمي</option>
+              <option>تسويقي</option>
+              <option>قصصي</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="platform">المنصة</label>
+            <select id="platform">
+              <option>YouTube Shorts</option>
+              <option>Instagram Reels</option>
+              <option>TikTok</option>
+            </select>
+          </div>
+        </div>
+
+        <button id="generateBtn">إنشاء محتوى</button>
+
+        <div id="status" class="status">جاهز</div>
+
+        <section id="results" class="hidden">
+          <h2>النص</h2>
+          <pre id="scriptOutput"></pre>
+
+          <h2>خطة النشر</h2>
+          <div id="socialPlan"></div>
+
+          <h2>الفيديو</h2>
+          <video id="videoPreview" controls></video>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

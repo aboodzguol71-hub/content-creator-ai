@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+.venv/
+
+# Output
+backend/output/
+
+# Node
+node_modules/
