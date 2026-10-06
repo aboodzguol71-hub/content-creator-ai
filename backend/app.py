@@ -1,12 +1,20 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
-from backend.config import OUTPUT_DIR
-from backend.services.llm_service import generate_script
-from backend.services.tts_service import generate_audio
-from backend.services.video_service import generate_video
-from backend.services.social_service import plan_social_post
+
+try:
+    from backend.config import OUTPUT_DIR
+    from backend.services.llm_service import generate_script
+    from backend.services.tts_service import generate_audio
+    from backend.services.video_service import generate_video
+    from backend.services.social_service import plan_social_post
+except ImportError:
+    # دعم التشغيل من داخل مجلد backend مباشرة: `cd backend && uvicorn app:app`
+    from config import OUTPUT_DIR
+    from services.llm_service import generate_script
+    from services.tts_service import generate_audio
+    from services.video_service import generate_video
+    from services.social_service import plan_social_post
 
 app = FastAPI(title="منشئ المحتوى الذكي", version="0.1.0")
 

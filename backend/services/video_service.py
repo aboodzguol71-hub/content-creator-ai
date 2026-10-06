@@ -1,3 +1,4 @@
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -10,6 +11,9 @@ def generate_video(script: str, audio_path: str, platform: str, duration_seconds
     bg_path = OUTPUT_DIR / "background.png"
     create_background_image(bg_path, script, platform)
     output_video = OUTPUT_DIR / "final_video.mp4"
+
+    if shutil.which("ffmpeg") is None:
+        raise RuntimeError("FFmpeg غير مثبت. يرجى تثبيته قبل إنشاء الفيديو.")
 
     cmd = [
         "ffmpeg",
@@ -32,7 +36,9 @@ def generate_video(script: str, audio_path: str, platform: str, duration_seconds
         str(output_video),
     ]
 
-    subprocess.run(cmd, check=False)
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise RuntimeError(f"فشل إنشاء الفيديو: {result.stderr or result.stdout or 'خطأ غير معروف'}")
     return str(output_video)
 
 
@@ -65,10 +71,13 @@ def wrap_text(text: str, max_chars: int):
     lines = []
     current = ""
     for word in words:
+        if not word:
+            continue
         if len(current) + len(word) + 1 <= max_chars:
             current = (current + " " + word).strip()
         else:
-            lines.append(current)
+            if current:
+                lines.append(current)
             current = word
     if current:
         lines.append(current)
