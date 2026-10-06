@@ -2,8 +2,12 @@ import os
 import shutil
 import subprocess
 import wave
+from pathlib import Path
 
-from backend.config import OUTPUT_DIR
+try:
+    from backend.config import OUTPUT_DIR
+except ImportError:
+    from config import OUTPUT_DIR
 
 
 def generate_audio(script: str) -> str:
@@ -37,7 +41,7 @@ def generate_audio(script: str) -> str:
 
 
 def create_silent_wav(path):
-    """يُنشئ ملف WAV صامت وعمل مع FFmpeg دون فشل."""
+    """ينشئ ملف WAV صامت وعمل مع FFmpeg دون فشل."""
     sample_rate = 22050
     duration_seconds = 1
     total_frames = sample_rate * duration_seconds

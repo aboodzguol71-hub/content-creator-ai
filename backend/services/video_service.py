@@ -4,7 +4,10 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-from backend.config import OUTPUT_DIR
+try:
+    from backend.config import OUTPUT_DIR
+except ImportError:
+    from config import OUTPUT_DIR
 
 
 def generate_video(script: str, audio_path: str, platform: str, duration_seconds: int = 20) -> str:

@@ -2,7 +2,10 @@ import json
 import os
 import requests
 
-from backend.config import OLLAMA_URL, OLLAMA_MODEL
+try:
+    from backend.config import OLLAMA_URL, OLLAMA_MODEL
+except ImportError:
+    from config import OLLAMA_URL, OLLAMA_MODEL
 
 
 def generate_script(topic: str, tone: str, platform: str, language: str = "ar") -> str:
@@ -41,7 +44,8 @@ def generate_script(topic: str, tone: str, platform: str, language: str = "ar") 
         text = data.get("response", "").strip()
         if text:
             return text
-    except Exception:
+    except Exception as e:
+        print(f"خطأ في الاتصال بـ Ollama: {e}")
         pass
 
     return build_fallback_script(topic, tone, platform)
