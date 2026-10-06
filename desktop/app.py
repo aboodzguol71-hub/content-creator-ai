@@ -33,11 +33,27 @@ class ContentGeneratorWorker(QThread):
         self.tone = tone
         self.platform = platform
         self.duration = duration
-        self.api_url = "http://localhost:8000"
+        # محاولة الاتصال بـ localhost أو 127.0.0.1
+        self.api_urls = [
+            "http://127.0.0.1:8000",
+            "http://localhost:8000",
+            "http://0.0.0.0:8000"
+        ]
+        self.api_url = None
 
     def run(self):
         try:
-            self.progress.emit("جاري الاتصال بالخادم...")
+            # البحث عن الخادم الذي يعمل
+            self.api_url = self._find_working_server()
+            if not self.api_url:
+                self.error.emit(
+                    "لم يتمكن من العثور على الخادم.\n"
+                    "تأكد من تشغيل الخادم بـ:\n"
+                    "python -m uvicorn backend.app:app --host 0.0.0.0 --port 8000"
+                )
+                return
+
+            self.progress.emit(f"جاري الاتصال بالخادم على {self.api_url}...")
             
             payload = {
                 "topic": self.topic,
@@ -57,14 +73,29 @@ class ContentGeneratorWorker(QThread):
                 data = response.json()
                 self.finished.emit(data)
             else:
-                self.error.emit(f"خطأ من الخادم: {response.status_code}")
-        except requests.exceptions.ConnectionError:
+                self.error.emit(f"خطأ من الخادم: {response.status_code}\n{response.text}")
+        except requests.exceptions.ConnectionError as e:
             self.error.emit(
-                "لم يتمكن من الاتصال بالخادم.\n"
-                "تأكد من تشغيل الخادم على http://localhost:8000"
+                f"لم يتمكن من الاتصال بالخادم.\n"
+                f"الخطأ: {str(e)}\n\n"
+                f"تأكد من تشغيل الخادم بـ:\n"
+                f"cd ~/content-creator-ai\n"
+                f"source venv/bin/activate\n"
+                f"python -m uvicorn backend.app:app --host 0.0.0.0 --port 8000"
             )
         except Exception as e:
             self.error.emit(f"حدث خطأ: {str(e)}")
+
+    def _find_working_server(self):
+        """البحث عن الخادم الذي يعمل"""
+        for url in self.api_urls:
+            try:
+                response = requests.get(f"{url}/health", timeout=2)
+                if response.status_code == 200:
+                    return url
+            except:
+                continue
+        return None
 
 
 class SmartContentCreatorApp(QMainWindow):
@@ -73,13 +104,14 @@ class SmartContentCreatorApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.worker = None
+        self.server_url = None
         self.init_ui()
         self.setWindowTitle("منشئ المحتوى الذكي")
         self.setGeometry(100, 100, 1200, 800)
         self.apply_dark_theme()
         
         # التحقق من الخادم عند البدء
-        self.check_server()
+        QTimer.singleShot(500, self.check_server)
 
     def init_ui(self):
         """إنشاء واجهة المستخدم"""
@@ -251,10 +283,10 @@ class SmartContentCreatorApp(QMainWindow):
         layout.addWidget(QLabel("معلومات الخادم:"))
         
         server_info_layout = QHBoxLayout()
-        server_label = QLabel("عنوان الخادم: http://localhost:8000")
+        self.server_label = QLabel("عنوان الخادم: جاري البحث...")
         self.server_status_icon = QLabel("🔴")
         server_info_layout.addWidget(self.server_status_icon)
-        server_info_layout.addWidget(server_label)
+        server_info_layout.addWidget(self.server_label)
         server_info_layout.addStretch()
         layout.addLayout(server_info_layout)
         
@@ -291,12 +323,13 @@ class SmartContentCreatorApp(QMainWindow):
         help_text.setReadOnly(True)
         help_text.setText(
             "كيفية الاستخدام:\n\n"
-            "1. تأكد من تشغيل Ollama بـ: ollama serve\n"
-            "2. اكتب موضوع المحتوى\n"
-            "3. اختر الأسلوب والمنصة\n"
-            "4. اضغط 'إنشاء محتوى'\n"
-            "5. انتظر حتى يتم إنشاء النص والصوت والفيديو\n"
-            "6. انسخ النص أو افتح مجلد المخرجات"
+            "1. تأكد من تشغيل Ollama: ollama serve\n"
+            "2. تأكد من تشغيل الخادم: python -m uvicorn backend.app:app --host 0.0.0.0 --port 8000\n"
+            "3. اكتب موضوع المحتوى\n"
+            "4. اختر الأسلوب والمنصة\n"
+            "5. اضغط 'إنشاء محتوى'\n"
+            "6. انتظر حتى يتم إنشاء النص والصوت والفيديو\n"
+            "7. انسخ النص أو افتح مجلد المخرجات"
         )
         help_text.setMaximumHeight(200)
         layout.addWidget(help_text)
@@ -307,6 +340,14 @@ class SmartContentCreatorApp(QMainWindow):
 
     def generate_content(self):
         """توليد محتوى جديد"""
+        if not self.server_url:
+            QMessageBox.warning(
+                self,
+                "خطأ",
+                "الخادم غير متصل.\nيرجى التحقق من حالة الاتصال في تبويب الإعدادات."
+            )
+            return
+        
         topic = self.topic_input.toPlainText().strip()
         
         if not topic:
@@ -379,16 +420,27 @@ class SmartContentCreatorApp(QMainWindow):
 
     def check_server(self):
         """التحقق من حالة الخادم"""
-        try:
-            response = requests.get("http://localhost:8000/health", timeout=2)
-            if response.status_code == 200:
-                self.status_label.setText("حالة الاتصال: 🟢 متصل")
-                self.server_status_icon.setText("🟢")
-                return
-        except:
-            pass
+        urls = [
+            "http://127.0.0.1:8000",
+            "http://localhost:8000",
+            "http://0.0.0.0:8000"
+        ]
         
+        for url in urls:
+            try:
+                response = requests.get(f"{url}/health", timeout=2)
+                if response.status_code == 200:
+                    self.server_url = url
+                    self.status_label.setText(f"حالة الاتصال: 🟢 متصل ({url})")
+                    self.server_label.setText(f"عنوان الخادم: {url}")
+                    self.server_status_icon.setText("🟢")
+                    return
+            except:
+                continue
+        
+        self.server_url = None
         self.status_label.setText("حالة الاتصال: 🔴 غير متصل")
+        self.server_label.setText("عنوان الخادم: لم يتم العثور على الخادم")
         self.server_status_icon.setText("🔴")
 
     def copy_script(self):
